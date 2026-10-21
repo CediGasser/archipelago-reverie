@@ -3,7 +3,6 @@ using System.Diagnostics;
 using ScriptableObjects;
 using Unity.Mathematics;
 using UnityEngine;
-using UnityEngine.Serialization;
 using WorldGeneration;
 using Debug = UnityEngine.Debug;
 
@@ -16,10 +15,24 @@ namespace Chunks
 
         private readonly HashSet<Chunk> _chunks = new ();
         private MeshGenerator _meshGenerator;
+        // Rolled once per session so tweaking other settings doesn't reroll the world
+        private int _randomSeed;
+        private bool _settingsChanged;
 
         void Awake()
         {
-            this._meshGenerator = new MeshGenerator(this.generationSettings);
+            this._randomSeed = UnityEngine.Random.Range(int.MinValue, int.MaxValue);
+            this._meshGenerator = this.CreateMeshGenerator();
+        }
+
+        void OnEnable()
+        {
+            this.generationSettings.Changed += this.OnSettingsChanged;
+        }
+
+        void OnDisable()
+        {
+            this.generationSettings.Changed -= this.OnSettingsChanged;
         }
 
         void Start()
@@ -33,6 +46,32 @@ namespace Chunks
                       $"in {stopwatch.Elapsed.TotalMilliseconds:F1} ms, seed {this._meshGenerator.Seed}");
         }
 
+        void Update()
+        {
+            // Rebuilt here instead of in the event handler: Unity doesn't allow heavy work inside OnValidate,
+            // and dragging a slider fires several changes per frame that this collapses into one rebuild
+            if (!this._settingsChanged) return;
+            this._settingsChanged = false;
+
+            this.RegenerateChunks();
+        }
+
+        private void OnSettingsChanged() => this._settingsChanged = true;
+
+        private MeshGenerator CreateMeshGenerator() =>
+            new(this.generationSettings, this.generationSettings.Seed ?? this._randomSeed);
+
+        private void RegenerateChunks()
+        {
+            var stopwatch = Stopwatch.StartNew();
+
+            this._meshGenerator = this.CreateMeshGenerator();
+            foreach (var chunk in this._chunks)
+                chunk.Regenerate(this._meshGenerator);
+
+            Debug.Log($"Regenerated {this._chunks.Count} chunks " +
+                      $"in {stopwatch.Elapsed.TotalMilliseconds:F1} ms, seed {this._meshGenerator.Seed}");
+        }
 
         private Chunk CreateChunk(int3 chunkCoord)
         {

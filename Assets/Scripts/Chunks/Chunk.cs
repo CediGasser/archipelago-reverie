@@ -13,27 +13,29 @@ namespace Chunks
 
         public void Initialize(int3 chunkCoord, MeshGenerator generator, Material material)
         {
-            this._meshGenerator = generator;
             this._chunkCoord = chunkCoord;
-            this.transform.localPosition = generator.Grid.ChunkOrigin(chunkCoord);
 
-            this._mesh = this.CreateMesh(chunkCoord, generator);
+            this._mesh = new Mesh { name = $"Chunk {chunkCoord}" };
             this.GetComponent<MeshFilter>().sharedMesh = this._mesh;
 
             this.GetComponent<MeshRenderer>().material = material;
+
+            this.Regenerate(generator);
         }
 
-        private Mesh CreateMesh(int3 chunkCoord, MeshGenerator generator)
+        // Reuses the existing Mesh so live setting changes don't allocate a new one each time
+        public void Regenerate(MeshGenerator generator)
         {
-            ChunkMeshData meshData = generator.GenerateMeshData(chunkCoord);
+            this._meshGenerator = generator;
+            this.transform.localPosition = generator.Grid.ChunkOrigin(this._chunkCoord);
 
-            Mesh newMesh = new Mesh();
-            newMesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
-            newMesh.SetVertices(meshData.Vertices);
-            newMesh.SetTriangles(meshData.Triangles, 0);
-            newMesh.SetNormals(meshData.Normals);
+            ChunkMeshData meshData = generator.GenerateMeshData(this._chunkCoord);
 
-            return newMesh;
+            this._mesh.Clear();
+            this._mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+            this._mesh.SetVertices(meshData.Vertices);
+            this._mesh.SetTriangles(meshData.Triangles, 0);
+            this._mesh.SetNormals(meshData.Normals);
         }
 
         private void OnDestroy()

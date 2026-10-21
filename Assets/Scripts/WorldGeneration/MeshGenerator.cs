@@ -15,9 +15,9 @@ namespace WorldGeneration
         public ChunkGrid Grid { get; }
         public int Seed { get; }
 
-        public MeshGenerator(GenerationSettings settings) {
+        public MeshGenerator(GenerationSettings settings, int seed) {
             this.Grid = settings.Grid;
-            this.Seed = settings.Seed ?? UnityEngine.Random.Range(int.MinValue, int.MaxValue);
+            this.Seed = seed;
             this._noiseStack = new NoiseStack(settings.NoiseScale, this.Seed);
             this._isoLevel = settings.IsoLevel;
         }

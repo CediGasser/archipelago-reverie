@@ -1,3 +1,4 @@
+using System;
 using Chunks;
 using UnityEngine;
 
@@ -22,12 +23,16 @@ namespace ScriptableObjects
         public float NoiseScale => this.noiseScale;
         public float IsoLevel => this.isoLevel;
 
+        // Raised on every inspector edit, also during Play mode
+        public event Action Changed;
+
         private void OnValidate()
         {
             this.cellsPerAxis = Mathf.Clamp(this.cellsPerAxis, 1, 64);
             this.chunkSize = Mathf.Max(1, this.chunkSize);
             this.noiseScale = Mathf.Max(0.01f, this.noiseScale);
             this.isoLevel = Mathf.Clamp01(this.isoLevel);
+            this.Changed?.Invoke();
         }
     }
 }
